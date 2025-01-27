@@ -1,13 +1,14 @@
 import sys
 import pymysql
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QLabel, \
-    QTableWidget, QTableWidgetItem, QDialog, QMessageBox
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLineEdit, QLabel, \
+    QTableWidget, QTableWidgetItem, QDialog, QMessageBox, QComboBox
 import config  # Импортируем конфигурацию
 
 
 # Подключение к базе данных MySQL через PyMySQL с использованием конфигурации из config.py
 def connect_db():
     try:
+        print("Подключаемся к базе данных...")  # Для дебага
         db_config = config.DB_CONFIG  # Получаем настройки подключения
         return pymysql.connect(
             host=db_config['host'],
@@ -17,8 +18,9 @@ def connect_db():
             charset=db_config['charset']
         )
     except pymysql.MySQLError as e:
-        print(f"Ошибка при подключении к базе данных: {e}")
+        print(f"Ошибка при подключении к базе данных: {e}")  # Для дебага
         return None
+
 
 
 # Аутентификация пользователя
@@ -49,6 +51,7 @@ def get_fire_extinguishers():
     try:
         cursor.execute("SELECT * FROM fire_extinguishers")
         extinguishers = cursor.fetchall()
+        print("Полученные огнетушители:", extinguishers)  # Выводим для диагностики
         return extinguishers
     except pymysql.MySQLError as e:
         print(f"Ошибка при выполнении запроса: {e}")
@@ -57,8 +60,47 @@ def get_fire_extinguishers():
         conn.close()
 
 
+
+# Получение данных о корпусах
+def get_corps():
+    print("Получаем данные о корпусах...")  # Для дебага
+    conn = connect_db()
+    if not conn:
+        return []  # Если соединение не удалось, возвращаем пустой список
+
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM corps")
+        corps = cursor.fetchall()
+        print(f"Полученные корпусы: {corps}")  # Для дебага
+        return corps
+    except pymysql.MySQLError as e:
+        print(f"Ошибка при выполнении запроса: {e}")  # Для дебага
+        return []
+    finally:
+        conn.close()
+
+
+# Получение данных о корпусе по его ID
+def get_corps_by_id(corp_id):
+    conn = connect_db()
+    if not conn:
+        return None  # Если соединение не удалось, возвращаем None
+
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM corps WHERE id = %s", (corp_id,))
+        corp = cursor.fetchone()
+        return corp  # Возвращаем данные корпуса
+    except pymysql.MySQLError as e:
+        print(f"Ошибка при выполнении запроса: {e}")
+        return None
+    finally:
+        conn.close()
+
+
 # Добавление нового огнетушителя в базу данных
-def add_fire_extinguisher(number, cabinet, expiration_date, needs_replacement):
+def add_fire_extinguisher(number, cabinet, expiration_date, needs_replacement, corp_id):
     conn = connect_db()
     if not conn:
         print("Ошибка подключения к базе данных!")
@@ -66,10 +108,30 @@ def add_fire_extinguisher(number, cabinet, expiration_date, needs_replacement):
 
     cursor = conn.cursor()
     try:
-        cursor.execute("""
-            INSERT INTO fire_extinguishers (number, cabinet, expiration_date, needs_replacement)
-            VALUES (%s, %s, %s, %s)
-        """, (number, cabinet, expiration_date, needs_replacement))
+        cursor.execute(""" 
+            INSERT INTO fire_extinguishers (number, cabinet, expiration_date, needs_replacement, corp_id)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (number, cabinet, expiration_date, needs_replacement, corp_id))
+        conn.commit()
+    except pymysql.MySQLError as e:
+        print(f"Ошибка при выполнении запроса: {e}")
+    finally:
+        conn.close()
+
+
+# Добавление нового корпуса
+def add_corp(number, address):
+    conn = connect_db()
+    if not conn:
+        print("Ошибка подключения к базе данных!")
+        return  # Если соединение не удалось, прерываем выполнение функции
+
+    cursor = conn.cursor()
+    try:
+        cursor.execute(""" 
+            INSERT INTO corps (number, address)
+            VALUES (%s, %s)
+        """, (number, address))
         conn.commit()
     except pymysql.MySQLError as e:
         print(f"Ошибка при выполнении запроса: {e}")
@@ -101,6 +163,11 @@ class MainWindow(QWidget):
             self.add_extinguisher_button.clicked.connect(self.add_fire_extinguisher)
             layout.addWidget(self.add_extinguisher_button)
 
+            # Кнопка для добавления корпуса
+            self.add_corp_button = QPushButton('Добавить корпус', self)
+            self.add_corp_button.clicked.connect(self.add_corp)
+            layout.addWidget(self.add_corp_button)
+
         # Кнопка для выхода из программы
         self.logout_button = QPushButton('Выход', self)
         self.logout_button.clicked.connect(self.close)
@@ -108,49 +175,66 @@ class MainWindow(QWidget):
 
         self.setLayout(layout)
 
-        # Применяем стиль к кнопке
-        self.fire_extinguishers_button.setStyleSheet("""
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                padding: 10px;
-                border: none;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
-
         # После авторизации активируем кнопку "Все огнетушители"
         self.fire_extinguishers_button.setEnabled(True)
 
     def show_fire_extinguishers(self):
+        # Получаем данные о огнетушителях
         extinguishers = get_fire_extinguishers()
+        print(f"Полученные огнетушители: {extinguishers}")  # Для дебага
         if not extinguishers:
             QMessageBox.warning(self, 'Ошибка', 'Не удалось загрузить данные об огнетушителях!')
             return
 
+        # Создаем таблицу для отображения
         table = QTableWidget()
         table.setRowCount(len(extinguishers))
-        table.setColumnCount(4)
-        table.setHorizontalHeaderLabels(['Номер', 'Кабинет', 'Годен до', 'Требуется замена'])
+        table.setColumnCount(5)
+        table.setHorizontalHeaderLabels(['Номер', 'Кабинет', 'Годен до', 'Требуется замена', 'Корпус'])
 
+        # Заполняем таблицу данными
         for i, ext in enumerate(extinguishers):
-            table.setItem(i, 0, QTableWidgetItem(ext[1]))  # Номер огнетушителя
-            table.setItem(i, 1, QTableWidgetItem(ext[2]))  # Кабинет
-            table.setItem(i, 2, QTableWidgetItem(str(ext[3])))  # Годен до (дата)
-            table.setItem(i, 3, QTableWidgetItem('Да' if ext[4] else 'Нет'))  # Требуется замена
+            ext_id, number, cabinet, expiration_date, needs_replacement, corp_id = ext
 
-        table.show()  # Показываем таблицу с огнетушителями
+            table.setItem(i, 0, QTableWidgetItem(str(number)))  # Номер огнетушителя
+            table.setItem(i, 1, QTableWidgetItem(str(cabinet)))  # Кабинет
+            table.setItem(i, 2, QTableWidgetItem(str(expiration_date)))  # Годен до (дата)
+            table.setItem(i, 3, QTableWidgetItem('Да' if needs_replacement else 'Нет'))  # Требуется замена
+
+            # Получаем данные корпуса по ID
+            corp_name = get_corps_by_id(corp_id)
+            if corp_name:
+                table.setItem(i, 4, QTableWidgetItem(corp_name[1]))  # Адрес корпуса
+            else:
+                table.setItem(i, 4, QTableWidgetItem('Не найдено'))  # Если корпус не найден
+
+        # Создаем диалоговое окно для отображения таблицы
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Все огнетушители")
+        dialog.setGeometry(100, 100, 800, 400)  # Устанавливаем размеры окна
+
+        layout = QVBoxLayout()
+        layout.addWidget(table)
+        dialog.setLayout(layout)
+
+        # Пытаемся показать диалог с таблицей
+        try:
+            dialog.exec_()  # Это модальное окно, которое блокирует остальную часть интерфейса
+            print("Диалог с таблицей успешно отображен.")  # Для дебага
+        except Exception as e:
+            print(f"Ошибка при отображении диалога с таблицей: {e}")  # Для дебага
 
     def add_fire_extinguisher(self):
+        print("Открываем диалог для добавления огнетушителя...")  # Для дебага
         dialog = AddFireExtinguisherDialog(self)
         dialog.exec_()
+        print("Диалог для добавления огнетушителя закрыт.")  # Для дебага
+
+    def add_corp(self):
+        print("Открываем диалог для добавления корпуса...")  # Для дебага
+        dialog = AddCorpDialog(self)
+        dialog.exec_()
+        print("Диалог для добавления корпуса закрыт.")  # Для дебага
 
 
 class AddFireExtinguisherDialog(QDialog):
@@ -185,6 +269,13 @@ class AddFireExtinguisherDialog(QDialog):
         layout.addWidget(self.replacement_button_yes)
         layout.addWidget(self.replacement_button_no)
 
+        # Выпадающий список для выбора корпуса
+        self.corp_label = QLabel('Выберите корпус:', self)
+        self.corp_combo = QComboBox(self)
+        self.load_corps()
+        layout.addWidget(self.corp_label)
+        layout.addWidget(self.corp_combo)
+
         self.save_button = QPushButton('Сохранить', self)
         self.save_button.clicked.connect(self.save_fire_extinguisher)
         layout.addWidget(self.save_button)
@@ -207,11 +298,54 @@ class AddFireExtinguisherDialog(QDialog):
         number = self.number_input.text()
         cabinet = self.cabinet_input.text()
         expiration_date = self.expiration_input.text()
+        corp_id = self.corp_combo.currentData()
 
         # Сохраняем данные в базу данных
-        add_fire_extinguisher(number, cabinet, expiration_date, self.needs_replacement)
+        add_fire_extinguisher(number, cabinet, expiration_date, self.needs_replacement, corp_id)
 
         QMessageBox.information(self, 'Успех', 'Огнетушитель добавлен!')
+        self.close()
+
+    def load_corps(self):
+        corps = get_corps()
+        for corp in corps:
+            # Добавляем строку "Номер корпуса - Адрес"
+            corp_name = f"{corp[1]} - {corp[2]}"
+            self.corp_combo.addItem(corp_name, corp[0])  # Добавляем имя и ID корпуса в комбинированный список
+
+
+class AddCorpDialog(QDialog):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWindowTitle("Добавить корпус")
+        self.setGeometry(200, 200, 400, 200)
+
+        layout = QVBoxLayout()
+
+        self.number_label = QLabel('Номер корпуса:', self)
+        self.number_input = QLineEdit(self)
+        layout.addWidget(self.number_label)
+        layout.addWidget(self.number_input)
+
+        self.address_label = QLabel('Адрес корпуса:', self)
+        self.address_input = QLineEdit(self)
+        layout.addWidget(self.address_label)
+        layout.addWidget(self.address_input)
+
+        self.save_button = QPushButton('Сохранить', self)
+        self.save_button.clicked.connect(self.save_corp)
+        layout.addWidget(self.save_button)
+
+        self.setLayout(layout)
+
+    def save_corp(self):
+        number = self.number_input.text()
+        address = self.address_input.text()
+
+        # Сохраняем данные в базу данных
+        add_corp(number, address)
+
+        QMessageBox.information(self, 'Успех', 'Корпус добавлен!')
         self.close()
 
 
@@ -225,7 +359,7 @@ class LoginWindow(QWidget):
     def init_ui(self):
         layout = QVBoxLayout()
 
-        self.username_label = QLabel('Логин:', self)
+        self.username_label = QLabel('Имя пользователя:', self)
         self.username_input = QLineEdit(self)
         layout.addWidget(self.username_label)
         layout.addWidget(self.username_input)
@@ -252,13 +386,15 @@ class LoginWindow(QWidget):
             self.main_window = MainWindow(user)
             self.main_window.show()
         else:
-            QMessageBox.warning(self, 'Ошибка', 'Неверный логин или пароль!')
+            QMessageBox.warning(self, 'Ошибка', 'Неверное имя пользователя или пароль!')
 
 
 def main():
     app = QApplication(sys.argv)
+
     login_window = LoginWindow()
     login_window.show()
+
     sys.exit(app.exec_())
 
 
