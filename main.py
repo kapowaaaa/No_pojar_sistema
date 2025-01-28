@@ -189,7 +189,6 @@ class MainWindow(QWidget):
         # После авторизации активируем кнопку "Все огнетушители"
         self.fire_extinguishers_button.setEnabled(True)
 
-
     def show_fire_extinguishers(self):
         # Получаем данные о огнетушителях
         extinguishers = get_fire_extinguishers()
@@ -203,6 +202,31 @@ class MainWindow(QWidget):
         table.setRowCount(len(extinguishers))
         table.setColumnCount(5)
         table.setHorizontalHeaderLabels(['Номер', 'Кабинет', 'Годен до', 'Требуется замена', 'Корпус'])
+
+        # Стиль таблицы
+        table.setStyleSheet("""
+            QTableWidget {
+                background-color: #f0f0f0;
+                color: black;
+                font-family: 'SF Pro';
+                font-size: 14px;
+                gridline-color: lightgray;
+            }
+            QHeaderView::section {
+                background-color: #BDFF00;
+                color: black;
+                font-weight: bold;
+                font-size: 14px;
+            }
+            QTableWidget::item {
+                background-color: white;
+                padding: 5px;
+            }
+            QTableWidget::item:selected {
+                background-color: #BDFF00;
+                color: black;
+            }
+        """)
 
         # Заполняем таблицу данными
         for i, ext in enumerate(extinguishers):
@@ -219,6 +243,9 @@ class MainWindow(QWidget):
                 table.setItem(i, 4, QTableWidgetItem(corp_name[1]))  # Адрес корпуса
             else:
                 table.setItem(i, 4, QTableWidgetItem('Не найдено'))  # Если корпус не найден
+
+        # Автоматическое растягивание колонок под содержимое
+        table.resizeColumnsToContents()
 
         # Создаем диалоговое окно для отображения таблицы
         dialog = QDialog(self)
@@ -360,17 +387,33 @@ class AddCorpDialog(QDialog):
 
         layout = QVBoxLayout()
 
+        # Используем ранее определенные цвета
+        self.button_bg_color = "#BDFF00"
+        self.button_text_color = "black"
+        self.button_border_radius = "5px"
+        self.font_family = "'SF Pro'"
+        self.font_size = "14px"
+
+        # Цвет фона для текстовых полей (можно легко изменить в коде)
+        self.input_bg_color = "lightgray"  # Цвет фона для всех полей ввода
+
+        # Поля ввода и метки
         self.number_label = QLabel('Номер корпуса:', self)
         self.number_input = QLineEdit(self)
+        self.number_input.setStyleSheet(f"background-color: {self.input_bg_color}; font-family: {self.font_family}; font-size: {self.font_size};")
         layout.addWidget(self.number_label)
         layout.addWidget(self.number_input)
 
         self.address_label = QLabel('Адрес корпуса:', self)
         self.address_input = QLineEdit(self)
+        self.address_input.setStyleSheet(f"background-color: {self.input_bg_color}; font-family: {self.font_family}; font-size: {self.font_size};")
         layout.addWidget(self.address_label)
         layout.addWidget(self.address_input)
 
         self.save_button = QPushButton('Сохранить', self)
+        self.save_button.setStyleSheet(
+            f"background-color: {self.button_bg_color}; color: {self.button_text_color}; "
+            f"border-radius: {self.button_border_radius}; font-family: {self.font_family}; font-size: {self.font_size};")
         self.save_button.clicked.connect(self.save_corp)
         layout.addWidget(self.save_button)
 
