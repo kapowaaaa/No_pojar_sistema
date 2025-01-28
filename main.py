@@ -147,7 +147,10 @@ class MainWindow(QWidget):
 
     def init_ui(self):
         self.setWindowTitle('Информационная система для учета огнетушителей')
-        self.setGeometry(100, 100, 600, 400)
+        self.setGeometry(150, 150, 1500, 750)
+
+        # Устанавливаем цвет фона всего окна
+        self.setStyleSheet("background-color: gray;")  # Задний фон всего окна в черный
 
         layout = QVBoxLayout()
 
@@ -155,28 +158,37 @@ class MainWindow(QWidget):
         self.fire_extinguishers_button = QPushButton('Все огнетушители', self)
         self.fire_extinguishers_button.setEnabled(False)  # Изначально кнопка неактивна
         self.fire_extinguishers_button.clicked.connect(self.show_fire_extinguishers)
+        self.fire_extinguishers_button.setStyleSheet(
+            "background-color: #BDFF00; color: black; border-radius: 5px; font-family: 'SF Pro'; font-size: 25px;")  # Стиль кнопки
         layout.addWidget(self.fire_extinguishers_button)
 
         # Кнопка для добавления огнетушителей (только для администратора)
         if self.user[3] == 'admin':
             self.add_extinguisher_button = QPushButton('Добавить огнетушитель', self)
             self.add_extinguisher_button.clicked.connect(self.add_fire_extinguisher)
+            self.add_extinguisher_button.setStyleSheet(
+                "background-color: #BDFF00; color: black; border-radius: 5px; font-family: 'SF Pro'; font-size: 25px;")  # Стиль кнопки
             layout.addWidget(self.add_extinguisher_button)
 
             # Кнопка для добавления корпуса
             self.add_corp_button = QPushButton('Добавить корпус', self)
             self.add_corp_button.clicked.connect(self.add_corp)
+            self.add_corp_button.setStyleSheet(
+                "background-color: #BDFF00; color: black; border-radius: 25; font-family: 'SF Pro'; font-size: 25px;")  # Стиль кнопки
             layout.addWidget(self.add_corp_button)
 
         # Кнопка для выхода из программы
         self.logout_button = QPushButton('Выход', self)
         self.logout_button.clicked.connect(self.close)
+        self.logout_button.setStyleSheet(
+            "background-color: #BDFF00; color: black; border-radius: 25px; font-family: 'SF Pro'; font-size: 25px;")  # Стиль кнопки
         layout.addWidget(self.logout_button)
 
         self.setLayout(layout)
 
         # После авторизации активируем кнопку "Все огнетушители"
         self.fire_extinguishers_button.setEnabled(True)
+
 
     def show_fire_extinguishers(self):
         # Получаем данные о огнетушителях
@@ -211,7 +223,7 @@ class MainWindow(QWidget):
         # Создаем диалоговое окно для отображения таблицы
         dialog = QDialog(self)
         dialog.setWindowTitle("Все огнетушители")
-        dialog.setGeometry(100, 100, 800, 400)  # Устанавливаем размеры окна
+        dialog.setGeometry(150, 150, 1500, 750)  # Устанавливаем размеры окна
 
         layout = QVBoxLayout()
         layout.addWidget(table)
@@ -241,30 +253,50 @@ class AddFireExtinguisherDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
         self.setWindowTitle("Добавить огнетушитель")
-        self.setGeometry(200, 200, 400, 300)
+        self.setGeometry(750, 350, 400, 300)
 
         layout = QVBoxLayout()
 
+        # Используем ранее определенные цвета
+        self.button_bg_color = "#BDFF00"
+        self.button_text_color = "black"
+        self.button_border_radius = "5px"
+        self.font_family = "'SF Pro'"
+        self.font_size = "14px"
+
+        # Цвет фона для текстовых полей (можно легко изменить в коде)
+        self.input_bg_color = "lightgray"  # Цвет фона для всех полей ввода
+
+        # Поля ввода и метки
         self.number_label = QLabel('Номер огнетушителя:', self)
         self.number_input = QLineEdit(self)
+        self.number_input.setStyleSheet(f"background-color: {self.input_bg_color}; font-family: {self.font_family}; font-size: {self.font_size};")
         layout.addWidget(self.number_label)
         layout.addWidget(self.number_input)
 
         self.cabinet_label = QLabel('Кабинет:', self)
         self.cabinet_input = QLineEdit(self)
+        self.cabinet_input.setStyleSheet(f"background-color: {self.input_bg_color}; font-family: {self.font_family}; font-size: {self.font_size};")
         layout.addWidget(self.cabinet_label)
         layout.addWidget(self.cabinet_input)
 
         self.expiration_label = QLabel('Годен до (ГГГГ-ММ-ДД):', self)
         self.expiration_input = QLineEdit(self)
+        self.expiration_input.setStyleSheet(f"background-color: {self.input_bg_color}; font-family: {self.font_family}; font-size: {self.font_size};")
         layout.addWidget(self.expiration_label)
         layout.addWidget(self.expiration_input)
 
         self.replacement_label = QLabel('Требуется замена:', self)
         self.replacement_button_yes = QPushButton('Да', self)
+        self.replacement_button_yes.setStyleSheet(
+            f"background-color: lightgreen; font-family: {self.font_family}; font-size: {self.font_size};")
         self.replacement_button_yes.clicked.connect(self.set_replacement_yes)
+
         self.replacement_button_no = QPushButton('Нет', self)
+        self.replacement_button_no.setStyleSheet(
+            f"background-color: lightcoral; font-family: {self.font_family}; font-size: {self.font_size};")
         self.replacement_button_no.clicked.connect(self.set_replacement_no)
+
         layout.addWidget(self.replacement_label)
         layout.addWidget(self.replacement_button_yes)
         layout.addWidget(self.replacement_button_no)
@@ -273,16 +305,22 @@ class AddFireExtinguisherDialog(QDialog):
         self.corp_label = QLabel('Выберите корпус:', self)
         self.corp_combo = QComboBox(self)
         self.load_corps()
+        self.corp_combo.setStyleSheet(
+            f"background-color: {self.input_bg_color}; font-family: {self.font_family}; font-size: {self.font_size};")
         layout.addWidget(self.corp_label)
         layout.addWidget(self.corp_combo)
 
         self.save_button = QPushButton('Сохранить', self)
+        self.save_button.setStyleSheet(
+            f"background-color: {self.button_bg_color}; color: {self.button_text_color}; "
+            f"border-radius: {self.button_border_radius}; font-family: {self.font_family}; font-size: {self.font_size};")
         self.save_button.clicked.connect(self.save_fire_extinguisher)
         layout.addWidget(self.save_button)
 
         self.setLayout(layout)
 
         self.needs_replacement = 0  # по умолчанию "Нет" (0)
+
 
     def set_replacement_yes(self):
         self.needs_replacement = 1  # "Да"
@@ -318,7 +356,7 @@ class AddCorpDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
         self.setWindowTitle("Добавить корпус")
-        self.setGeometry(200, 200, 400, 200)
+        self.setGeometry(750, 350, 400, 200)
 
         layout = QVBoxLayout()
 
@@ -353,25 +391,40 @@ class LoginWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Авторизация")
-        self.setGeometry(100, 100, 400, 250)
+        self.setGeometry(750, 350, 400, 250)
         self.init_ui()
 
     def init_ui(self):
         layout = QVBoxLayout()
 
+        # Устанавливаем цвет фона всего окна
+        self.setStyleSheet("background-color: black;")  # Задний фон всего окна в ярко-зеленый
+
+        # Создаем и настраиваем элементы
         self.username_label = QLabel('Имя пользователя:', self)
         self.username_input = QLineEdit(self)
+        self.username_label.setStyleSheet("color: #BDFF00; font-family: 'SF Pro'; font-size: 14px;")  # Цвет текста
+        self.username_input.setStyleSheet(
+            "background-color: gray; border: 1px solid gray; font-family: 'SF Pro'; font-size: 14px;")  # Шрифт и размер
+
         layout.addWidget(self.username_label)
         layout.addWidget(self.username_input)
 
         self.password_label = QLabel('Пароль:', self)
         self.password_input = QLineEdit(self)
         self.password_input.setEchoMode(QLineEdit.Password)
+        self.password_label.setStyleSheet("color: #BDFF00; font-family: 'SF Pro'; font-size: 14px;")  # Цвет текста
+        self.password_input.setStyleSheet(
+            "background-color: gray; border: 1px solid gray; font-family: 'SF Pro'; font-size: 14px;")
+
         layout.addWidget(self.password_label)
         layout.addWidget(self.password_input)
 
         self.login_button = QPushButton('Войти', self)
         self.login_button.clicked.connect(self.login)
+        self.login_button.setStyleSheet(
+            "background-color: #BDFF00; color: black; border-radius: 5px; font-family: 'SF Pro'; font-size: 14px;")  # Шрифт и размер для кнопки
+
         layout.addWidget(self.login_button)
 
         self.setLayout(layout)
